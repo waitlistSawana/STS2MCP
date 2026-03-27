@@ -491,10 +491,23 @@ public static partial class McpMod
         var state = new Dictionary<string, object?>();
 
         var eventModel = eventRoom.CanonicalEvent;
+        if (eventModel == null)
+        {
+            state["event_id"] = null;
+            state["event_name"] = "Loading Event";
+            state["is_ancient"] = false;
+            state["in_dialogue"] = false;
+            state["body"] = null;
+            state["options"] = new List<Dictionary<string, object?>>();
+            state["is_loading"] = true;
+            return state;
+        }
+
         bool isAncient = eventModel is AncientEventModel;
         state["event_id"] = eventModel.Id.Entry;
         state["event_name"] = SafeGetText(() => eventModel.Title);
         state["is_ancient"] = isAncient;
+        state["is_loading"] = false;
 
         // Check dialogue state for ancients
         bool inDialogue = false;
@@ -522,6 +535,7 @@ public static partial class McpMod
             foreach (var button in buttons)
             {
                 var opt = button.Option;
+                if (opt == null) continue;
                 var optData = new Dictionary<string, object?>
                 {
                     ["index"] = index,
@@ -549,11 +563,19 @@ public static partial class McpMod
     private static Dictionary<string, object?> BuildRestSiteState(RestSiteRoom restSiteRoom, RunState runState)
     {
         var state = new Dictionary<string, object?>();
+        if (restSiteRoom.Options == null)
+        {
+            state["options"] = new List<Dictionary<string, object?>>();
+            state["can_proceed"] = false;
+            state["is_loading"] = true;
+            return state;
+        }
 
         var options = new List<Dictionary<string, object?>>();
         int index = 0;
         foreach (var opt in restSiteRoom.Options)
         {
+            if (opt == null) continue;
             options.Add(new Dictionary<string, object?>
             {
                 ["index"] = index,
@@ -565,6 +587,7 @@ public static partial class McpMod
             index++;
         }
         state["options"] = options;
+        state["is_loading"] = false;
 
         var proceedButton = NRestSiteRoom.Instance?.ProceedButton;
         state["can_proceed"] = proceedButton?.IsEnabled ?? false;
