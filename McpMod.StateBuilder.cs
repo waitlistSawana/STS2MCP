@@ -137,25 +137,25 @@ public static partial class McpMod
             if (NMapScreen.Instance is { IsOpen: true })
             {
                 result["state_type"] = "map";
-                result["map"] = BuildMapState(runState);
+                result["map"] = TryBuildMapState(runState);
             }
             else
             {
                 result["state_type"] = "event";
-                result["event"] = BuildEventState(eventRoom, runState);
+                result["event"] = TryBuildEventState(eventRoom, runState);
             }
         }
         else if (currentRoom is MapRoom)
         {
             result["state_type"] = "map";
-            result["map"] = BuildMapState(runState);
+            result["map"] = TryBuildMapState(runState);
         }
         else if (currentRoom is MerchantRoom merchantRoom)
         {
             if (NMapScreen.Instance is { IsOpen: true })
             {
                 result["state_type"] = "map";
-                result["map"] = BuildMapState(runState);
+                result["map"] = TryBuildMapState(runState);
             }
             else
             {
@@ -166,7 +166,7 @@ public static partial class McpMod
                     merchUI.OpenInventory();
                 }
                 result["state_type"] = "shop";
-                result["shop"] = BuildShopState(merchantRoom, runState);
+                result["shop"] = TryBuildShopState(merchantRoom, runState);
             }
         }
         else if (currentRoom is RestSiteRoom restSiteRoom)
@@ -174,12 +174,12 @@ public static partial class McpMod
             if (NMapScreen.Instance is { IsOpen: true })
             {
                 result["state_type"] = "map";
-                result["map"] = BuildMapState(runState);
+                result["map"] = TryBuildMapState(runState);
             }
             else
             {
                 result["state_type"] = "rest_site";
-                result["rest_site"] = BuildRestSiteState(restSiteRoom, runState);
+                result["rest_site"] = TryBuildRestSiteState(restSiteRoom, runState);
             }
         }
         else if (currentRoom is TreasureRoom treasureRoom)
@@ -187,12 +187,12 @@ public static partial class McpMod
             if (NMapScreen.Instance is { IsOpen: true })
             {
                 result["state_type"] = "map";
-                result["map"] = BuildMapState(runState);
+                result["map"] = TryBuildMapState(runState);
             }
             else
             {
                 result["state_type"] = "treasure";
-                result["treasure"] = BuildTreasureState(treasureRoom, runState);
+                result["treasure"] = TryBuildTreasureState(treasureRoom, runState);
             }
         }
         else
@@ -217,6 +217,103 @@ public static partial class McpMod
         }
 
         return result;
+    }
+
+    private static Dictionary<string, object?> TryBuildMapState(RunState runState)
+    {
+        try
+        {
+            return BuildMapState(runState);
+        }
+        catch
+        {
+            return new Dictionary<string, object?>
+            {
+                ["visited"] = new List<object>(),
+                ["next_options"] = new List<object>(),
+                ["nodes"] = new List<object>(),
+                ["is_loading"] = true
+            };
+        }
+    }
+
+    private static Dictionary<string, object?> TryBuildEventState(EventRoom eventRoom, RunState runState)
+    {
+        try
+        {
+            return BuildEventState(eventRoom, runState);
+        }
+        catch
+        {
+            return new Dictionary<string, object?>
+            {
+                ["event_id"] = null,
+                ["event_name"] = "Loading Event",
+                ["is_ancient"] = false,
+                ["in_dialogue"] = false,
+                ["body"] = null,
+                ["options"] = new List<object>(),
+                ["is_loading"] = true
+            };
+        }
+    }
+
+    private static Dictionary<string, object?> TryShopStateFallback()
+    {
+        return new Dictionary<string, object?>
+        {
+            ["items"] = new List<object>(),
+            ["cards"] = new List<object>(),
+            ["relics"] = new List<object>(),
+            ["potions"] = new List<object>(),
+            ["is_loading"] = true
+        };
+    }
+
+    private static Dictionary<string, object?> TryBuildShopState(MerchantRoom merchantRoom, RunState runState)
+    {
+        try
+        {
+            return BuildShopState(merchantRoom, runState);
+        }
+        catch
+        {
+            return TryShopStateFallback();
+        }
+    }
+
+    private static Dictionary<string, object?> TryBuildRestSiteState(RestSiteRoom restSiteRoom, RunState runState)
+    {
+        try
+        {
+            return BuildRestSiteState(restSiteRoom, runState);
+        }
+        catch
+        {
+            return new Dictionary<string, object?>
+            {
+                ["options"] = new List<object>(),
+                ["can_proceed"] = false,
+                ["is_loading"] = true
+            };
+        }
+    }
+
+    private static Dictionary<string, object?> TryBuildTreasureState(TreasureRoom treasureRoom, RunState runState)
+    {
+        try
+        {
+            return BuildTreasureState(treasureRoom, runState);
+        }
+        catch
+        {
+            return new Dictionary<string, object?>
+            {
+                ["relics"] = new List<object>(),
+                ["can_proceed"] = false,
+                ["is_loading"] = true
+            };
+        }
     }
 
     private static Dictionary<string, object?> BuildBattleState(RunState runState, CombatRoom combatRoom)
