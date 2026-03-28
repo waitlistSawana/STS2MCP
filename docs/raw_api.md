@@ -34,6 +34,11 @@ Returns the current game state. The `state_type` field indicates the screen:
 - `overlay` — Catch-all for unhandled overlay screens (prevents soft-locks)
 - `menu` — No run in progress
 
+**Menu state includes:**
+- Whether a saved run exists (`has_run_save`)
+- Whether the main menu UI is loaded (`main_menu_loaded`)
+- Whether the Continue button is currently actionable (`can_continue`)
+
 ### State details
 
 **Battle state includes:**
@@ -123,6 +128,12 @@ Returns the current game state. The `state_type` field indicates the screen:
 ```
 - `slot`: potion slot index (from GET response)
 - `target`: entity_id of the target (required for `AnyEnemy` potions, omit otherwise)
+
+**Continue a saved run from the main menu:**
+```json
+{ "action": "continue_run" }
+```
+- Only works when no run is currently active and the main menu shows a valid Continue button
 
 **End turn:**
 ```json

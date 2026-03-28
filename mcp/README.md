@@ -5,6 +5,7 @@
 | Tool | Scope | Description |
 |---|---|---|
 | `get_game_state(format?)` | General | Get current game state (`markdown` or `json`) |
+| `menu_continue_run()` | Menu | Continue the current saved run from the main menu |
 | `use_potion(slot, target?)` | General | Use a potion (works in and out of combat) |
 | `proceed_to_map()` | General | Proceed from rewards/rest site/shop/treasure to the map |
 | `combat_play_card(card_index, target?)` | Combat | Play a card from hand |

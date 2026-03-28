@@ -113,6 +113,15 @@ async def proceed_to_map() -> str:
         return _handle_error(e)
 
 
+@mcp.tool()
+async def menu_continue_run() -> str:
+    """[Menu] Continue the current saved singleplayer run from the main menu."""
+    try:
+        return await _post({"action": "continue_run"})
+    except Exception as e:
+        return _handle_error(e)
+
+
 # ---------------------------------------------------------------------------
 # Combat (state_type: monster / elite / boss)
 # ---------------------------------------------------------------------------

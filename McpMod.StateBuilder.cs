@@ -24,6 +24,7 @@ using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
+using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Relics;
@@ -32,6 +33,8 @@ using MegaCrit.Sts2.Core.Nodes.Screens.TreasureRoomRelic;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Saves;
+using Godot;
 
 namespace STS2_MCP;
 
@@ -45,6 +48,7 @@ public static partial class McpMod
         {
             result["state_type"] = "menu";
             result["message"] = "No run in progress. Player is in the main menu.";
+            result["menu"] = BuildMenuState();
             return result;
         }
 
@@ -217,6 +221,30 @@ public static partial class McpMod
         }
 
         return result;
+    }
+
+    private static Dictionary<string, object?> BuildMenuState()
+    {
+        var state = new Dictionary<string, object?>();
+        bool hasRunSave = SaveManager.Instance.HasRunSave;
+        state["has_run_save"] = hasRunSave;
+
+        var tree = (SceneTree)Engine.GetMainLoop();
+        var mainMenu = FindFirst<NMainMenu>(tree.Root);
+        state["main_menu_loaded"] = mainMenu != null;
+
+        if (mainMenu == null)
+        {
+            state["can_continue"] = hasRunSave;
+            return state;
+        }
+
+        mainMenu.RefreshButtons();
+        var continueButton = mainMenu.GetNodeOrNull<NMainMenuTextButton>("MainMenuTextButtons/ContinueButton");
+        state["can_continue"] = hasRunSave && continueButton?.Visible == true && continueButton.IsEnabled;
+        state["continue_button_visible"] = continueButton?.Visible ?? false;
+
+        return state;
     }
 
     private static Dictionary<string, object?> TryBuildMapState(RunState runState)

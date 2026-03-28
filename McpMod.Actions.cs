@@ -19,6 +19,7 @@ using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Nodes.RestSite;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Rewards;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Commands;
@@ -29,6 +30,8 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Potions;
 using MegaCrit.Sts2.Core.GameActions;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Saves;
+using Godot;
 
 namespace STS2_MCP;
 
@@ -37,7 +40,13 @@ public static partial class McpMod
     private static Dictionary<string, object?> ExecuteAction(string action, Dictionary<string, JsonElement> data)
     {
         if (!RunManager.Instance.IsInProgress)
-            return Error("No run in progress");
+        {
+            return action switch
+            {
+                "continue_run" => ExecuteContinueRun(),
+                _ => Error("No run in progress")
+            };
+        }
 
         var runState = RunManager.Instance.DebugOnlyGetState()!;
         var player = LocalContext.GetMe(runState);
@@ -46,6 +55,7 @@ public static partial class McpMod
 
         return action switch
         {
+            "continue_run" => Error("A run is already in progress"),
             "play_card" => ExecutePlayCard(player, data),
             "use_potion" => ExecuteUsePotion(player, data),
             "end_turn" => ExecuteEndTurn(player),
@@ -67,6 +77,35 @@ public static partial class McpMod
             "skip_relic_selection" => ExecuteSkipRelicSelection(),
             "claim_treasure_relic" => ExecuteClaimTreasureRelic(data),
             _ => Error($"Unknown action: {action}")
+        };
+    }
+
+    private static Dictionary<string, object?> ExecuteContinueRun()
+    {
+        if (!SaveManager.Instance.HasRunSave)
+            return Error("No saved run is available to continue");
+
+        var tree = (SceneTree)Engine.GetMainLoop();
+        var mainMenu = FindFirst<NMainMenu>(tree.Root);
+        if (mainMenu == null)
+            return Error("Main menu is not currently loaded");
+
+        mainMenu.RefreshButtons();
+
+        var continueButton = mainMenu.GetNodeOrNull<NMainMenuTextButton>("MainMenuTextButtons/ContinueButton");
+        if (continueButton == null)
+            return Error("Continue button not found in main menu");
+        if (!continueButton.Visible)
+            return Error("Continue button is not visible");
+        if (!continueButton.IsEnabled)
+            return Error("Continue button is disabled");
+
+        continueButton.ForceClick();
+
+        return new Dictionary<string, object?>
+        {
+            ["status"] = "ok",
+            ["message"] = "Continuing saved run from main menu"
         };
     }
 
