@@ -6,7 +6,10 @@ using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
+using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
+using MegaCrit.Sts2.Core.Nodes.Screens.Timeline;
+using MegaCrit.Sts2.Core.Nodes.Screens.Timeline.UnlockScreens;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Relics;
@@ -45,6 +48,7 @@ public static partial class McpMod
             return action switch
             {
                 "continue_run" => ExecuteContinueRun(),
+                "start_new_run" => ExecuteStartNewRun(),
                 _ => Error("No run in progress")
             };
         }
@@ -57,6 +61,7 @@ public static partial class McpMod
         return action switch
         {
             "continue_run" => Error("A run is already in progress"),
+            "start_new_run" => Error("A run is already in progress"),
             "play_card" => ExecutePlayCard(player, data),
             "use_potion" => ExecuteUsePotion(player, data),
             "end_turn" => ExecuteEndTurn(player),
@@ -108,6 +113,168 @@ public static partial class McpMod
             ["status"] = "ok",
             ["message"] = "Continuing saved run from main menu"
         };
+    }
+
+    private static Dictionary<string, object?> ExecuteStartNewRun()
+    {
+        var tree = (SceneTree)Engine.GetMainLoop();
+        var root = tree.Root;
+
+        var timelineTutorial = FindFirst<NTimelineTutorial>(root);
+        if (timelineTutorial != null && timelineTutorial.IsVisibleInTree())
+        {
+            var acknowledgeButton = FindFirst<NAcknowledgeButton>(timelineTutorial);
+            if (acknowledgeButton is { Visible: true, IsEnabled: true })
+            {
+                acknowledgeButton.ForceClick();
+                return new Dictionary<string, object?>
+                {
+                    ["status"] = "ok",
+                    ["message"] = "Acknowledging the timeline tutorial"
+                };
+            }
+
+            return Error("Timeline tutorial is visible but the acknowledge button is not yet enabled");
+        }
+
+        var timelineScreen = FindFirst<NTimelineScreen>(root);
+        if (timelineScreen != null && timelineScreen.IsVisibleInTree())
+        {
+            var unlockScreen = FindFirst<NUnlockScreen>(timelineScreen);
+            if (unlockScreen != null && unlockScreen.Visible)
+            {
+                var confirmButton = unlockScreen.GetNodeOrNull<NUnlockConfirmButton>("ConfirmButton");
+                if (confirmButton is { Visible: true, IsEnabled: true })
+                {
+                    confirmButton.ForceClick();
+                    return new Dictionary<string, object?>
+                    {
+                        ["status"] = "ok",
+                        ["message"] = "Confirming the timeline unlock screen"
+                    };
+                }
+
+                return Error("Timeline unlock screen is still animating");
+            }
+
+            var inspectScreen = FindFirst<NEpochInspectScreen>(timelineScreen);
+            if (inspectScreen != null && inspectScreen.Visible)
+            {
+                var closeButton = inspectScreen.GetNodeOrNull<NButton>("%CloseButton");
+                if (closeButton is { Visible: true, IsEnabled: true })
+                {
+                    closeButton.ForceClick();
+                    return new Dictionary<string, object?>
+                    {
+                        ["status"] = "ok",
+                        ["message"] = "Closing the revealed epoch inspect screen"
+                    };
+                }
+
+                return Error("Epoch inspect screen is open but the close button is not yet enabled");
+            }
+
+            var revealableSlot = FindAll<NEpochSlot>(timelineScreen)
+                .FirstOrDefault(slot => slot.Visible && slot.IsEnabled && slot.State == EpochSlotState.Obtained);
+            if (revealableSlot != null)
+            {
+                revealableSlot.ForceClick();
+                return new Dictionary<string, object?>
+                {
+                    ["status"] = "ok",
+                    ["message"] = $"Revealing timeline epoch '{SafeGetText(() => revealableSlot.model.Title.GetFormattedText()) ?? revealableSlot.Name}'"
+                };
+            }
+
+            var backButton = timelineScreen.GetNodeOrNull<NBackButton>("BackButton");
+            if (backButton is { Visible: true, IsEnabled: true })
+            {
+                backButton.ForceClick();
+                return new Dictionary<string, object?>
+                {
+                    ["status"] = "ok",
+                    ["message"] = "Closing the timeline screen to return to the main menu"
+                };
+            }
+
+            return Error("Timeline screen is open but the back button is not yet enabled");
+        }
+
+        var characterSelect = FindFirst<NCharacterSelectScreen>(root);
+        if (characterSelect != null && characterSelect.IsVisibleInTree())
+        {
+            var embarkButton = characterSelect.GetNodeOrNull<NConfirmButton>("ConfirmButton");
+            if (embarkButton is { Visible: true, IsEnabled: true })
+            {
+                embarkButton.ForceClick();
+                return new Dictionary<string, object?>
+                {
+                    ["status"] = "ok",
+                    ["message"] = "Embarking on a new singleplayer run"
+                };
+            }
+
+            var firstUnlocked = FindAll<NCharacterSelectButton>(characterSelect)
+                .FirstOrDefault(button => button.Visible && button.IsEnabled && !button.IsLocked);
+            if (firstUnlocked != null)
+            {
+                firstUnlocked.Select();
+                return new Dictionary<string, object?>
+                {
+                    ["status"] = "ok",
+                    ["message"] = $"Selecting character '{SafeGetText(() => firstUnlocked.Character.Title) ?? firstUnlocked.Name}'"
+                };
+            }
+
+            return Error("Character select is open but no selectable character or embark button is available");
+        }
+
+        var singleplayerSubmenu = FindFirst<NSingleplayerSubmenu>(root);
+        if (singleplayerSubmenu != null && singleplayerSubmenu.IsVisibleInTree())
+        {
+            var standardButton = singleplayerSubmenu.GetNodeOrNull<NSubmenuButton>("StandardButton");
+            if (standardButton is { Visible: true, IsEnabled: true })
+            {
+                standardButton.ForceClick();
+                return new Dictionary<string, object?>
+                {
+                    ["status"] = "ok",
+                    ["message"] = "Opening standard singleplayer character select"
+                };
+            }
+
+            return Error("Singleplayer submenu is open but the Standard button is not actionable");
+        }
+
+        var mainMenu = FindFirst<NMainMenu>(root);
+        if (mainMenu == null || !mainMenu.IsVisibleInTree())
+            return Error("Main menu is not currently loaded");
+
+        mainMenu.RefreshButtons();
+        var singleplayerButton = mainMenu.GetNodeOrNull<NMainMenuTextButton>("MainMenuTextButtons/SingleplayerButton");
+        if (singleplayerButton is { Visible: true, IsEnabled: true })
+        {
+            mainMenu.OpenSingleplayerSubmenu();
+
+            return new Dictionary<string, object?>
+            {
+                ["status"] = "ok",
+                ["message"] = "Opening singleplayer submenu from the main menu"
+            };
+        }
+
+        var timelineButton = mainMenu.GetNodeOrNull<NMainMenuTextButton>("MainMenuTextButtons/TimelineButton");
+        if (timelineButton is { Visible: true, IsEnabled: true })
+        {
+            timelineButton.ForceClick();
+            return new Dictionary<string, object?>
+            {
+                ["status"] = "ok",
+                ["message"] = "Opening the timeline screen before starting a new run"
+            };
+        }
+        
+        return Error("Neither the singleplayer nor timeline button is currently actionable");
     }
 
     private static Dictionary<string, object?> ExecutePlayCard(Player player, Dictionary<string, JsonElement> data)

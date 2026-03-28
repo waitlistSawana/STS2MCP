@@ -122,6 +122,19 @@ async def menu_continue_run() -> str:
         return _handle_error(e)
 
 
+@mcp.tool()
+async def menu_start_new_run() -> str:
+    """[Menu] Advance the standard singleplayer new-run flow.
+
+    Repeated calls move through the menu flow one step at a time:
+    main menu -> singleplayer submenu -> character select -> embark.
+    """
+    try:
+        return await _post({"action": "start_new_run"})
+    except Exception as e:
+        return _handle_error(e)
+
+
 # ---------------------------------------------------------------------------
 # Combat (state_type: monster / elite / boss)
 # ---------------------------------------------------------------------------

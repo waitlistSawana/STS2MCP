@@ -24,8 +24,11 @@ using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
+using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
+using MegaCrit.Sts2.Core.Nodes.Screens.Timeline;
+using MegaCrit.Sts2.Core.Nodes.Screens.Timeline.UnlockScreens;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Relics;
@@ -47,6 +50,35 @@ public static partial class McpMod
 
         if (!RunManager.Instance.IsInProgress)
         {
+            var tree = (SceneTree)Engine.GetMainLoop();
+            var root = tree.Root;
+
+            var characterSelect = FindFirst<NCharacterSelectScreen>(root);
+            if (characterSelect != null && characterSelect.IsVisibleInTree())
+            {
+                result["state_type"] = "character_select";
+                result["character_select"] = BuildCharacterSelectState(characterSelect);
+                return result;
+            }
+
+            var singleplayerSubmenu = FindFirst<NSingleplayerSubmenu>(root);
+            if (singleplayerSubmenu != null && singleplayerSubmenu.IsVisibleInTree())
+            {
+                result["state_type"] = "singleplayer_submenu";
+                result["singleplayer_submenu"] = BuildSingleplayerSubmenuState(singleplayerSubmenu);
+                return result;
+            }
+
+            var timelineScreen = FindFirst<NTimelineScreen>(root);
+            var timelineTutorial = FindFirst<NTimelineTutorial>(root);
+            if ((timelineScreen != null && timelineScreen.IsVisibleInTree()) ||
+                (timelineTutorial != null && timelineTutorial.IsVisibleInTree()))
+            {
+                result["state_type"] = "timeline";
+                result["timeline"] = BuildTimelineState(timelineScreen, timelineTutorial);
+                return result;
+            }
+
             result["state_type"] = "menu";
             result["message"] = "No run in progress. Player is in the main menu.";
             result["menu"] = BuildMenuState();
@@ -247,10 +279,79 @@ public static partial class McpMod
 
         mainMenu.RefreshButtons();
         var continueButton = mainMenu.GetNodeOrNull<NMainMenuTextButton>("MainMenuTextButtons/ContinueButton");
+        var singleplayerButton = mainMenu.GetNodeOrNull<NMainMenuTextButton>("MainMenuTextButtons/SingleplayerButton");
+        var timelineButton = mainMenu.GetNodeOrNull<NMainMenuTextButton>("MainMenuTextButtons/TimelineButton");
         state["can_continue"] = hasRunSave && continueButton?.Visible == true && continueButton.IsEnabled;
         state["continue_button_visible"] = continueButton?.Visible ?? false;
+        state["can_open_singleplayer"] = singleplayerButton is { Visible: true, IsEnabled: true };
+        state["can_open_timeline"] = timelineButton is { Visible: true, IsEnabled: true };
 
         return state;
+    }
+
+    private static Dictionary<string, object?> BuildSingleplayerSubmenuState(NSingleplayerSubmenu submenu)
+    {
+        var standardButton = submenu.GetNodeOrNull<NSubmenuButton>("StandardButton");
+        var dailyButton = submenu.GetNodeOrNull<NSubmenuButton>("DailyButton");
+        var customButton = submenu.GetNodeOrNull<NSubmenuButton>("CustomRunButton");
+
+        return new Dictionary<string, object?>
+        {
+            ["can_open_standard"] = standardButton is { Visible: true, IsEnabled: true },
+            ["can_open_daily"] = dailyButton is { Visible: true, IsEnabled: true },
+            ["can_open_custom"] = customButton is { Visible: true, IsEnabled: true }
+        };
+    }
+
+    private static Dictionary<string, object?> BuildCharacterSelectState(NCharacterSelectScreen screen)
+    {
+        var embarkButton = screen.GetNodeOrNull<NConfirmButton>("ConfirmButton");
+        var buttons = FindAll<NCharacterSelectButton>(screen);
+        var characters = new List<object>();
+
+        foreach (var button in buttons.Where(button => button.Visible))
+        {
+            characters.Add(new Dictionary<string, object?>
+            {
+                ["name"] = SafeGetText(() => button.Character.Title),
+                ["id"] = button.Character.Id.Entry,
+                ["is_locked"] = button.IsLocked,
+                ["is_random"] = button.IsRandom,
+                ["is_enabled"] = button.IsEnabled
+            });
+        }
+
+        return new Dictionary<string, object?>
+        {
+            ["can_embark"] = embarkButton is { Visible: true, IsEnabled: true },
+            ["characters"] = characters
+        };
+    }
+
+    private static Dictionary<string, object?> BuildTimelineState(NTimelineScreen? screen, NTimelineTutorial? tutorial)
+    {
+        var acknowledgeButton = tutorial != null ? FindFirst<NAcknowledgeButton>(tutorial) : null;
+        var backButton = screen?.GetNodeOrNull<NBackButton>("BackButton");
+        var inspectScreen = screen != null ? FindFirst<NEpochInspectScreen>(screen) : null;
+        var inspectCloseButton = inspectScreen != null ? inspectScreen.GetNodeOrNull<NButton>("%CloseButton") : null;
+        var unlockScreen = screen != null ? FindFirst<NUnlockScreen>(screen) : null;
+        var unlockConfirmButton = unlockScreen != null ? unlockScreen.GetNodeOrNull<NUnlockConfirmButton>("ConfirmButton") : null;
+        var revealableSlot = screen != null
+            ? FindAll<NEpochSlot>(screen).FirstOrDefault(slot => slot.Visible && slot.IsEnabled && slot.State == EpochSlotState.Obtained)
+            : null;
+
+        return new Dictionary<string, object?>
+        {
+            ["tutorial_visible"] = tutorial != null && tutorial.IsVisibleInTree(),
+            ["can_acknowledge_tutorial"] = acknowledgeButton is { Visible: true, IsEnabled: true },
+            ["inspect_visible"] = inspectScreen != null && inspectScreen.Visible,
+            ["can_close_inspect"] = inspectCloseButton is { Visible: true, IsEnabled: true },
+            ["unlock_screen_visible"] = unlockScreen != null && unlockScreen.Visible,
+            ["can_confirm_unlock_screen"] = unlockConfirmButton is { Visible: true, IsEnabled: true },
+            ["can_reveal_epoch"] = revealableSlot != null,
+            ["revealable_epoch_id"] = revealableSlot?.model.Id,
+            ["can_go_back"] = backButton is { Visible: true, IsEnabled: true }
+        };
     }
 
     private static Dictionary<string, object?> BuildGameOverOverlayState(NGameOverScreen screen)

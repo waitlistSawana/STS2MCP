@@ -32,12 +32,37 @@ Returns the current game state. The `state_type` field indicates the screen:
 - `relic_select` — Relic choice screen (boss relics, immediate pick + skip)
 - `treasure` — Treasure room (chest auto-opens, relic claiming)
 - `overlay` — Catch-all for unhandled overlay screens (prevents soft-locks)
+- `singleplayer_submenu` — Singleplayer mode submenu (Standard / Daily / Custom)
+- `character_select` — Character select screen before starting a new run
+- `timeline` — Timeline gate / tutorial shown before the next run can be started
 - `menu` — No run in progress
 
 **Menu state includes:**
 - Whether a saved run exists (`has_run_save`)
 - Whether the main menu UI is loaded (`main_menu_loaded`)
 - Whether the Continue button is currently actionable (`can_continue`)
+- Whether Singleplayer is currently actionable (`can_open_singleplayer`)
+- Whether Timeline is currently actionable (`can_open_timeline`)
+
+**Singleplayer submenu state includes:**
+- Whether Standard is actionable (`can_open_standard`)
+- Whether Daily is actionable (`can_open_daily`)
+- Whether Custom Run is actionable (`can_open_custom`)
+
+**Character select state includes:**
+- Whether Embark is actionable (`can_embark`)
+- Visible character entries with `name`, `id`, `is_locked`, `is_random`, `is_enabled`
+
+**Timeline state includes:**
+- Whether the first-time tutorial overlay is visible (`tutorial_visible`)
+- Whether the tutorial acknowledge button is actionable (`can_acknowledge_tutorial`)
+- Whether an epoch inspect panel is open (`inspect_visible`)
+- Whether the inspect close button is actionable (`can_close_inspect`)
+- Whether an unlock screen is currently visible (`unlock_screen_visible`)
+- Whether the unlock screen confirm button is actionable (`can_confirm_unlock_screen`)
+- Whether a revealable epoch slot is actionable (`can_reveal_epoch`)
+- The pending revealable epoch id when available (`revealable_epoch_id`)
+- Whether the timeline back button is actionable (`can_go_back`)
 
 ### State details
 
@@ -139,6 +164,14 @@ Returns the current game state. The `state_type` field indicates the screen:
 { "action": "continue_run" }
 ```
 - Only works when no run is currently active and the main menu shows a valid Continue button
+
+**Advance the standard singleplayer new-run flow:**
+```json
+{ "action": "start_new_run" }
+```
+- Only works when no run is currently active
+- Repeated calls advance one step at a time:
+  timeline gate/tutorial if needed -> main menu -> singleplayer submenu -> character select -> embark
 
 **End turn:**
 ```json
