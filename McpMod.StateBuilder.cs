@@ -217,7 +217,7 @@ public static partial class McpMod
         var _player = LocalContext.GetMe(runState);
         if (_player != null)
         {
-            result["player"] = BuildPlayerState(_player);
+            result["player"] = TryBuildPlayerState(_player);
         }
 
         return result;
@@ -341,6 +341,22 @@ public static partial class McpMod
                 ["can_proceed"] = false,
                 ["is_loading"] = true
             };
+        }
+    }
+
+    private static Dictionary<string, object?> TryBuildPlayerState(Player player)
+    {
+        try
+        {
+            return BuildPlayerState(player);
+        }
+        catch
+        {
+            var state = new Dictionary<string, object?>();
+            try { state["character"] = SafeGetText(() => player.Character.Title); } catch { }
+            try { state["gold"] = player.Gold; } catch { }
+            state["is_loading"] = true;
+            return state;
         }
     }
 
