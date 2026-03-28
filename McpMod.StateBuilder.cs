@@ -24,6 +24,7 @@ using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
+using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
@@ -76,6 +77,11 @@ public static partial class McpMod
         {
             result["state_type"] = "relic_select";
             result["relic_select"] = BuildRelicSelectState(relicSelectScreen, runState);
+        }
+        else if (topOverlay is NGameOverScreen gameOverScreen)
+        {
+            result["state_type"] = "overlay";
+            result["overlay"] = BuildGameOverOverlayState(gameOverScreen);
         }
         else if (topOverlay is IOverlayScreen
                  && topOverlay is not NRewardsScreen
@@ -245,6 +251,20 @@ public static partial class McpMod
         state["continue_button_visible"] = continueButton?.Visible ?? false;
 
         return state;
+    }
+
+    private static Dictionary<string, object?> BuildGameOverOverlayState(NGameOverScreen screen)
+    {
+        var continueButton = FindFirst<NGameOverContinueButton>(screen);
+        var mainMenuButton = FindFirst<NReturnToMainMenuButton>(screen);
+
+        return new Dictionary<string, object?>
+        {
+            ["screen_type"] = nameof(NGameOverScreen),
+            ["message"] = "The game over screen is active.",
+            ["can_continue"] = continueButton is { Visible: true, IsEnabled: true },
+            ["can_return_to_main_menu"] = mainMenuButton is { Visible: true, IsEnabled: true }
+        };
     }
 
     private static Dictionary<string, object?> TryBuildMapState(RunState runState)

@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Rewards;
 using MegaCrit.Sts2.Core.Nodes.Screens;
+using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Relics;
@@ -504,6 +505,24 @@ public static partial class McpMod
             {
                 btn.ForceClick();
                 return new Dictionary<string, object?> { ["status"] = "ok", ["message"] = "Proceeding from rewards" };
+            }
+        }
+
+        // Try game over overlay: continue into the summary flow first, then return to main menu
+        if (overlay is NGameOverScreen gameOverScreen)
+        {
+            var continueButton = FindFirst<NGameOverContinueButton>(gameOverScreen);
+            if (continueButton is { Visible: true, IsEnabled: true })
+            {
+                continueButton.ForceClick();
+                return new Dictionary<string, object?> { ["status"] = "ok", ["message"] = "Advancing game over screen" };
+            }
+
+            var mainMenuButton = FindFirst<NReturnToMainMenuButton>(gameOverScreen);
+            if (mainMenuButton is { Visible: true, IsEnabled: true })
+            {
+                mainMenuButton.ForceClick();
+                return new Dictionary<string, object?> { ["status"] = "ok", ["message"] = "Returning to main menu from game over summary" };
             }
         }
 

@@ -105,6 +105,11 @@ Returns the current game state. The `state_type` field indicates the screen:
 - Proceed button state
 - Chest is auto-opened when state is queried
 
+**Game over overlay includes:**
+- `screen_type = NGameOverScreen`
+- Whether the in-screen Continue button is actionable (`can_continue`)
+- Whether the Return to Main Menu button is actionable (`can_return_to_main_menu`)
+
 ## `POST /api/v1/singleplayer`
 
 **Play a card:**
@@ -178,7 +183,8 @@ Returns the current game state. The `state_type` field indicates the screen:
 { "action": "proceed" }
 ```
 - Proceeds from the current screen to the map
-- Works from: rewards screen, rest site, shop (auto-closes inventory), treasure room
+- Works from: rewards screen, rest site, shop (auto-closes inventory), treasure room, game over screen
+- On the game over screen, `proceed` first advances the settlement flow, then returns to the main menu once that button becomes available
 - Does NOT work for events — use `choose_event_option` with the Proceed option's index
 
 **Choose a rest site option:**
